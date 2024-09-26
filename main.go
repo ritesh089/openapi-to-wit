@@ -1,130 +1,63 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-	"path/filepath"
-
-	"github.com/go-openapi/loads"
-	"github.com/go-openapi/spec"
 )
 
-// Converts OpenAPI types to WIT types
-func openAPITypeToWITType(openAPIType string) string {
-	switch openAPIType {
-	case "string":
-		return "string"
-	case "integer":
-		return "u32"
-	case "boolean":
-		return "bool"
-	case "array":
-		return "list"
-	default:
-		return "string"
-	}
-}
-
-// Generate WIT file content from OpenAPI specification
-func generateWITFromOpenAPI(api *spec.Swagger) (string, error) {
-	wit := "world api {\n"
-
-	// Loop through each path in the OpenAPI spec
-	for path, pathItem := range api.Paths.Paths {
-		for method, operation := range getOperations(pathItem) {
-			// Sanitize and format the path
-			witFunctionName := sanitizePath(path)
-
-			// Create WIT function signature
-			wit += fmt.Sprintf("  import %s_%s: func(", method, witFunctionName)
-
-			// Add parameters to WIT function
-			for i, param := range operation.Parameters {
-				witType := openAPITypeToWITType(param.Type)
-				if i > 0 {
-					wit += ", "
-				}
-				wit += fmt.Sprintf("%s: %s", param.Name, witType)
-			}
-
-			// Add return type (for now, assuming 200 response is relevant)
-			if len(operation.Responses.StatusCodeResponses) > 0 {
-				wit += ") -> ("
-				response := operation.Responses.StatusCodeResponses[200]
-				if response.Schema != nil {
-					witType := openAPITypeToWITType(response.Schema.Type[0])
-					wit += fmt.Sprintf("response: %s", witType)
-				}
-				wit += ")"
-			} else {
-				wit += ")"
-			}
-
-			// Close function definition
-			wit += "\n"
-		}
-	}
-
-	// Close the world
-	wit += "}\n"
-	return wit, nil
-}
-
-// Helper function to sanitize path strings for WIT naming conventions
-func sanitizePath(path string) string {
-	// Remove slashes and replace with underscores for function naming
-	return filepath.Base(path)
-}
-
-// Get all operations from a given path item
-func getOperations(pathItem spec.PathItem) map[string]*spec.Operation {
-	operations := map[string]*spec.Operation{}
-	if pathItem.Get != nil {
-		operations["get"] = pathItem.Get
-	}
-	if pathItem.Post != nil {
-		operations["post"] = pathItem.Post
-	}
-	if pathItem.Put != nil {
-		operations["put"] = pathItem.Put
-	}
-	if pathItem.Delete != nil {
-		operations["delete"] = pathItem.Delete
-	}
-	return operations
-}
+const OPENAPI_SPEC_PATH = "api/schemas/paths/openapi.yaml"
+const WIT_PATH = "wit/world.wit"
 
 func main() {
-	// Define paths
-	openAPISpecPath := "api/schemas/paths/openapi.yaml"
-	witOutputPath := "wit/world.wit"
-
-	// Load the OpenAPI specification
-	swaggerDoc, err := loads.Spec(openAPISpecPath)
+	// Load the OpenAPI schema from file path "api/schemas/paths/openapi.yaml"
+	schemaPath := OPENAPI_SPEC_PATH
+	openAPISchema, err := LoadOpenAPISchema(schemaPath)
 	if err != nil {
-		log.Fatalf("Error loading OpenAPI spec: %v", err)
+		log.Fatalf("Error loading OpenAPI schema: %v", err)
 	}
 
-	// Generate WIT from OpenAPI
-	witContent, err := generateWITFromOpenAPI(swaggerDoc.Spec())
-	if err != nil {
-		log.Fatalf("Error generating WIT content: %v", err)
+	// Extract the "Person" schema from the OpenAPI spec
+	personSchema, exists := openAPISchema.Components.Schemas["Person"]
+	if !exists {
+		log.Fatalf("Person schema not found in OpenAPI components")
 	}
 
-	// Ensure the output directory exists
-	err = os.MkdirAll(filepath.Dir(witOutputPath), os.ModePerm)
-	if err != nil {
-		log.Fatalf("Error creating directory for WIT output: %v", err)
+	// Generate Go struct from OpenAPI schema for "Person"
+	personStruct := GenerateGoStruct(personSchema, "Person")
+
+	// Store complex types in a map for easy lookup
+	complexTypes := map[string]ComplexType{
+		"Person": personStruct,
 	}
 
-	// Write the WIT content to the specified file
-	err = ioutil.WriteFile(witOutputPath, []byte(witContent), 0644)
-	if err != nil {
-		log.Fatalf("Error writing WIT file: %v", err)
+	// Define a WIT module for the OpenAPI-defined Person operations
+	exampleModule := WITModule{
+		ModuleName: "person_module",
+		Functions: []FunctionSignature{
+			{
+				Name: "createPerson",
+				Parameters: []Parameter{
+					{Name: "name", Type: WITTypeString},
+					{Name: "age", Type: WITTypeI32},
+				},
+				ReturnType: WITTypeStruct,
+				ReturnRef:  &personStruct, // Return complex Person struct
+			},
+			{
+				Name:       "getPerson",
+				Parameters: []Parameter{}, // No input parameters
+				ReturnType: WITTypeStruct,
+				ReturnRef:  &personStruct, // Return complex Person struct
+			},
+		},
 	}
 
-	fmt.Printf("WIT file successfully generated at %s\n", witOutputPath)
+	// Generate the WIT representation
+	wit := GenerateWIT(exampleModule, complexTypes)
+
+	// Write the WIT output to file "wit/world.wit"
+	witFilePath := WIT_PATH
+	err = WriteWITToFile(witFilePath, wit)
+	if err != nil {
+		log.Fatalf("Error writing WIT to file: %v", err)
+	}
 }
-

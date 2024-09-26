@@ -1,38 +1,45 @@
 openapi: 3.0.0
 info:
-  title: Example API
+  title: Person API
+  description: API for managing people.
   version: 1.0.0
 paths:
-  /users:
-    get:
-      summary: Get list of users
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
+  /person:
+    post:
+      summary: Create a person
+      operationId: createPerson
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
       responses:
         '200':
-          description: List of users
+          description: A person was created
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
-  /users/{id}:
+                $ref: '#/components/schemas/Person'
     get:
-      summary: Get user by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      summary: Get a person
+      operationId: getPerson
       responses:
         '200':
-          description: A user object
+          description: A person object
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/Person'
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
+      required:
+        - name
+        - age
