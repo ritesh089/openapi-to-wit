@@ -1,9 +1,0 @@
-type Person = record {
-    name: string,
-    age: i32,
-}
-
-world person_module {
-    createPerson: func(name: string, age: i32) -> Person
-    getPerson: func() -> Person
-}

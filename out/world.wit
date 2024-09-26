@@ -1,0 +1,9 @@
+type Person = record {
+    name: string,
+    age: i32,
+}
+
+world person api {
+    Postperson: func() -> Person
+    Getperson: func() -> Person
+}
