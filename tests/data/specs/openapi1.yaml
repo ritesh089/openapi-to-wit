@@ -1,0 +1,41 @@
+openapi: 3.0.0
+info:
+  title: Person API
+  version: "1.0"
+paths:
+  /person:
+    get:
+      summary: Get a person
+      operationId: getPerson
+      responses:
+        '200':
+          description: A person object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+    post:
+      summary: Create a person
+      operationId: createPerson
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+      responses:
+        '200':
+          description: A person object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
