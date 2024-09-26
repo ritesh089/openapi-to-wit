@@ -4,6 +4,6 @@ type Person = record {
 }
 
 world person api {
-    Postperson: func() -> Person
-    Getperson: func() -> Person
+    export Postperson: func() -> Person
+    export Getperson: func() -> Person
 }

@@ -13,7 +13,7 @@ func GenerateWITFromOpenAPI(spec *models.OpenAPISpec) string {
 	// First, generate types for all schemas outside the world block
 	witBuilder.WriteString(GenerateTypesForSchemas(spec.Components.Schemas))
 
-	// Then, generate the world definition with functions inside it
+	// Then, generate the world definition with exported functions inside it
 	witBuilder.WriteString(fmt.Sprintf("world %s {\n", strings.ToLower(spec.Info.Title)))
 
 	// Generate functions for each path in the OpenAPI spec
@@ -42,7 +42,7 @@ func GenerateTypesForSchemas(schemas map[string]models.Schema) string {
 }
 
 // GenerateFunctionsForPaths generates WIT functions for each OpenAPI path
-// These functions will be placed inside the world block
+// These functions will be placed inside the world block with "export" prepended
 func GenerateFunctionsForPaths(paths map[string]models.PathItem) string {
 	var witBuilder strings.Builder
 
@@ -51,8 +51,8 @@ func GenerateFunctionsForPaths(paths map[string]models.PathItem) string {
 			// Convert method and path to a function name
 			functionName := fmt.Sprintf("%s%s", strings.Title(strings.ToLower(method)), pathToFunctionName(path))
 
-			// Start function signature
-			witBuilder.WriteString(fmt.Sprintf("    %s: func(", functionName))
+			// Start function signature with "export"
+			witBuilder.WriteString(fmt.Sprintf("    export %s: func(", functionName))
 
 			// Handle request body parameters, if any
 			if operation.RequestBody != nil && operation.RequestBody.Content != nil {
